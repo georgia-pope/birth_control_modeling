@@ -116,9 +116,11 @@ def get_plotting_params(var_name):
     
 
 def plot_single_var(yy, var_name, tt, num_samples = c.num_samples, on_off = c.on_off):
+    # Removes first three cycles 
     tt_mask = np.where(tt >= 84, True, False)
     tt = tt[tt_mask]
     yy = yy[tt_mask]
+
     yy = get_variable(var_name, yy, tt, c.Params())
 
     title, ylabel, ylim = get_plotting_params(var_name)
@@ -145,13 +147,88 @@ def plot_single_var(yy, var_name, tt, num_samples = c.num_samples, on_off = c.on
         plt.xlabel('time (days)')
         plt.ylim((0,ylim))
         plt.show()
+
+def plot_four_variables(yy, var_names, tt, num_samples = c.num_samples, on_off = c.on_off):
+    # Removes first 3 cycles
+    tt_mask = np.where(tt >= 84, True, False)
+    tt = tt[tt_mask]
+    yy = yy[tt_mask]
+
+    if on_off:
+        on_off_mask = np.where((tt%28)>=21, True, False)
+        on_tt = tt[~on_off_mask]
+        off_tt = tt[on_off_mask]
+
+    y = []
+    titles = []
+    ylabels = []
+    ylims = []
+    for var in var_names:
+        y.append(get_variable(var, yy, tt, c.Params()))
+        title, ylabel, ylim = get_plotting_params(var)
+        titles.append(title)
+        ylabels.append(ylabel)
+        ylims.append(ylim)
+
+    fig, axs = plt.subplots(2, 2)
+
+    if on_off:
+        on_yy = y[0][~on_off_mask]
+        off_yy = y[0][on_off_mask]
+        axs[0, 0].plot(on_tt,on_yy, '.', markersize=1)
+        axs[0, 0].plot(off_tt,off_yy, '.', markersize=1)
+    else: 
+        axs[0, 0].plot(tt, y[0])
+    axs[0, 0].set_title(var_names[0])
+
+    if on_off:
+        on_yy = y[1][~on_off_mask]
+        off_yy = y[1][on_off_mask]
+        axs[0, 1].plot(on_tt,on_yy, '.', markersize=1)
+        axs[0, 1].plot(off_tt,off_yy, '.', markersize=1)
+    else:
+        axs[0, 1].plot(tt, y[1])
+    axs[0, 1].set_title(var_names[1])
+
+    if on_off:
+        on_yy = y[3][~on_off_mask]
+        off_yy = y[3][on_off_mask]
+        axs[1, 1].plot(on_tt,on_yy, '.', markersize=1)
+        axs[1, 1].plot(off_tt,off_yy, '.', markersize=1)
+    else:
+        axs[1, 1].plot(tt, y[3])
+    axs[1, 1].set_title(var_names[3])
+
+    if on_off:
+        on_yy = y[2][~on_off_mask]
+        off_yy = y[2][on_off_mask]
+        axs[1, 0].plot(on_tt,on_yy, '.', markersize=1)
+        axs[1, 0].plot(off_tt,off_yy, '.', markersize=1)
+    else:
+        axs[1, 0].plot(tt, y[2])
+    axs[1, 0].set_title(var_names[2])
+
+    i = 0
+    for ax in axs.flat:
+        ax.set(xlabel='Time (days)', ylabel=ylabels[i], ylim=(0,ylims[i]))
+        i += 1
+
+    # Hide x labels and tick labels for top plots and y ticks for right plots.
+    # for ax in axs.flat:
+    #     ax.label_outer()
+    fig.suptitle('Dose: ' + c.dosing)
+    plt.tight_layout()
+    plt.show()
+    
     
 
 tt, yy = solve()
 
 var_names = ['E_2', 'P_4', 'FSH', 'LH']
 
-for var in var_names:
-    plot_single_var(yy, var, tt)
+plot_four_variables(yy, var_names, tt)
+
+# for var in var_names:
+#     plot_single_var(yy, var, tt)
 
 

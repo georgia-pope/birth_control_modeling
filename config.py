@@ -9,7 +9,7 @@ dosing_dict = {
 }
 
 # Select dosing scheme from dosing_dict
-dosing = 'High E_2'
+dosing = 'Low Both'
 on_off = True
 
 # linspace params
