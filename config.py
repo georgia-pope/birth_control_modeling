@@ -1,5 +1,16 @@
 from collections import namedtuple
 
+dosing_dict = {
+    'High E_2': [1.3,0],
+    'Low E_2': [0.6,0],
+    'High P_4': [0,92],
+    'Low P_4': [0,40],
+    'Low Both': [0.6, 40],
+    'Normal Cycle': [0,0]
+}
+
+dosing = 'Normal Cycle'
+
 # Class with all the model parameters
 class Params:
     def __init__(self):
@@ -47,12 +58,21 @@ class Params:
         self.h_1 = 0.009
         self.h_2 = 0.029
         self.h_3 = 0.018
-        self.p_dose = 0 # 0 or 0.6 or 1.3
-        self.e_dose = 0 # 0 or 40 or 92
+        self.p_dose = dosing_dict[dosing][1] # 0 or 0.6 or 1.3
+        self.e_dose = dosing_dict[dosing][0] # 0 or 40 or 92
 
-num_samples=20000
+num_samples = 20000
 upper_bound = 180
-initial_conditions = [29.65,6.86, 8.47, 6.15, 3.83, 11.51, 5.48, 19.27, 45.64, 100.73, 125.95, 135.84, 168.71]
+initial_conditions = [29.65, 6.86, 8.47, 6.15, 3.83, 11.51, 5.48, 19.27, 45.64, 100.73, 125.95, 135.84, 168.71]
 on_off = False
 variables = {'RP_LH':0, 'LH':1,' RP_FSH':2, 'FSH':3, 'RcF':4, 'GrF':5, 'DomF':6, 'Sc_1':7,'Sc_2':8, 'Lut_1':9, 'Lut_2':10, 'Lut_3':11, 'Lut_4':12}
+
+# plotting params = [title, y_label, ylim] 
+plotting_params = {
+    'LH': [dosing + ', ' + 'LH', 'LH (UI/L)', 150],
+    'FSH':[dosing + ', ' + 'FSH', 'FSH (UI/L)', 30], 
+    'E_2':[dosing + ', ' + 'E2', 'E2 (pg/mL)', 300], 
+    'P_4':[dosing + ', ' + 'P4', 'P4 (ng/mL)', 20]
+    }
+
 

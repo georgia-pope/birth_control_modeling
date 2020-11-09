@@ -9,19 +9,20 @@ def calc_e_dose(t, e_dose, on_off = c.on_off, off_set=0):
     t = t+off_set
     if on_off:
         if isinstance(t, np.ndarray):
-            e_dose = np.where((t%28) > 21, 0, e_dose)
+            e_dose = np.where((t%28) >= 21, 0, e_dose)
         else:
-            if (t%28) > 21:
+            if (t%28) >= 21:
                 e_dose=0
     return e_dose
 
 def calc_p_dose(t, p_dose, on_off = c.on_off, off_set=0):
     t = t+off_set
     if on_off:
+        print('no')
         if isinstance(t, np.ndarray):
-            p_dose = np.where((t%28) > 21, 0, p_dose)
+            p_dose = np.where((t%28) >= 21, 0, p_dose)
         else:
-            if (t%28) > 21:
+            if (t%28) >= 21:
                 p_dose=0
     return p_dose
 
@@ -73,7 +74,8 @@ def solve():
     return tt, yy 
 
 def calculate_E2(p, yy, tt):
-    E2 = p.e_0 + p.e_1*yy[:,c.variables['GrF']] + p.e_2*yy[:,c.variables['DomF']] + p.e_3*yy[:,c.variables['Lut_4']] + p.calc_e_dose(tt, p.e_dose)
+    e_dose = calc_e_dose(tt, p.e_dose)
+    E2 = p.e_0 + p.e_1*yy[:,c.variables['GrF']] + p.e_2*yy[:,c.variables['DomF']] + p.e_3*yy[:,c.variables['Lut_4']] + e_dose
     return E2
 
 def calculate_P4(p, yy, tt):
@@ -85,6 +87,7 @@ def get_variable(var_name, yy, tt, p):
         yy = calculate_E2(p, yy, tt)
     elif var_name == 'P_4':
         yy = calculate_P4(p,yy,tt)
+        print(yy)
     elif var_name in list(c.variables.keys()):
         var_index = c.variables[var_name]
         yy = yy[:, var_index]
@@ -92,13 +95,37 @@ def get_variable(var_name, yy, tt, p):
         print('Invalid variable name')
     return yy
 
-def plot_solution(yy, var_name, title, ylabel, tt, ylim,  num_samples = c.num_samples, on_off = c.on_off):
+def get_plotting_params(var_name):
+    if var_name in list(c.plotting_params.keys()):
+        title, y_label, ylim = c.plotting_params[var_name]
+        return title, y_label, ylim
+    else:
+        print('Invalid variable name, add variable to plotting params in config file')
+    
+
+def plot_single_var(yy, var_name, tt, num_samples = c.num_samples, on_off = c.on_off):
     tt_mask = np.where(tt >= 84, True, False)
     tt = tt[tt_mask]
     yy = yy[tt_mask]
-    yy = get_variable(var_name, yy, tt, c.Params)
+    yy = get_variable(var_name, yy, tt, c.Params())
+
+    title, ylabel, ylim = get_plotting_params(var_name)
+
     if on_off:
-        pass
+        on_off_mask = np.where((tt%28)>=21, True, False)
+        on_tt = tt[~on_off_mask]
+        off_tt = tt[on_off_mask]
+        on_yy = yy[~on_off_mask]
+        off_yy = yy[on_off_mask]
+        plt.plot(on_tt,on_yy, '.')
+        plt.plot(off_tt,off_yy, '.')
+        plt.title(title)
+        plt.ylabel(ylabel)
+        plt.xlabel('time (days)')
+        plt.ylim((0,ylim))
+        plt.show()
+
+
     else:
         plt.plot(tt,yy)
         plt.title(title)
@@ -109,6 +136,10 @@ def plot_solution(yy, var_name, title, ylabel, tt, ylim,  num_samples = c.num_sa
     
 
 tt, yy = solve()
-plot_solution(yy, 'LH', 'LH', 'LH (UI/L)', tt, 150)
+
+var_names = ['E_2', 'P_4', 'FSH', 'LH']
+
+for var in var_names:
+    plot_single_var(yy, var, tt)
 
 
