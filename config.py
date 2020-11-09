@@ -27,7 +27,10 @@ plotting_params = {   # [title, y_label, ylim]
     'LH': [dosing + ', ' + 'LH', 'LH (UI/L)', 150],
     'FSH':[dosing + ', ' + 'FSH', 'FSH (UI/L)', 30], 
     'E_2':[dosing + ', ' + 'E2', 'E2 (pg/mL)', 300], 
-    'P_4':[dosing + ', ' + 'P4', 'P4 (ng/mL)', 20]
+    'P_4':[dosing + ', ' + 'P4', 'P4 (ng/mL)', 20],
+    'RcF':[dosing + ', ' + 'Recruiting Follicle', 'mass', 250],
+    'GrF':[dosing + ', ' + 'Growing Follicle', 'mass', 250],
+    'DomF':[dosing + ', ' + 'Dominant Follicle', 'mass', 250]
     }
 
 # Class with all the model parameters

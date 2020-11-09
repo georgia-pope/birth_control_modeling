@@ -99,7 +99,6 @@ def get_variable(var_name, yy, tt, p):
         yy = calculate_E2(p, yy, tt)
     elif var_name == 'P_4':
         yy = calculate_P4(p,yy,tt)
-        print(yy)
     elif var_name in list(c.variables.keys()):
         var_index = c.variables[var_name]
         yy = yy[:, var_index]
@@ -138,7 +137,6 @@ def plot_single_var(yy, var_name, tt, num_samples = c.num_samples, on_off = c.on
         plt.xlabel('time (days)')
         plt.ylim((0,ylim))
         plt.show()
-
 
     else:
         plt.plot(tt,yy)
@@ -213,9 +211,6 @@ def plot_four_variables(yy, var_names, tt, num_samples = c.num_samples, on_off =
         ax.set(xlabel='Time (days)', ylabel=ylabels[i], ylim=(0,ylims[i]))
         i += 1
 
-    # Hide x labels and tick labels for top plots and y ticks for right plots.
-    # for ax in axs.flat:
-    #     ax.label_outer()
     fig.suptitle('Dose: ' + c.dosing)
     plt.tight_layout()
     plt.show()
@@ -224,7 +219,8 @@ def plot_four_variables(yy, var_names, tt, num_samples = c.num_samples, on_off =
 
 tt, yy = solve()
 
-var_names = ['E_2', 'P_4', 'FSH', 'LH']
+# var_names = ['E_2', 'P_4', 'FSH', 'LH']
+var_names = ['LH', 'RcF', 'GrF', 'DomF']
 
 plot_four_variables(yy, var_names, tt)
 
