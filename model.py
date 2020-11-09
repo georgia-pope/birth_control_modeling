@@ -6,6 +6,13 @@ import matplotlib.pyplot as plt
 import config as c 
 
 def calc_e_dose(t, e_dose, on_off = c.on_off, off_set=0):
+    """
+        Params:
+            t (either float or np.array)
+            e_dose (float)  
+            on_off (bool) True if doing 21 days on 7 days off dosing 
+            off_set (int) Can be used to change when on/off dose starts
+    """
     t = t+off_set
     if on_off:
         if isinstance(t, np.ndarray):
@@ -16,6 +23,13 @@ def calc_e_dose(t, e_dose, on_off = c.on_off, off_set=0):
     return e_dose
 
 def calc_p_dose(t, p_dose, on_off = c.on_off, off_set=0):
+    """
+        Params:
+            t (either float or np.array)
+            p_dose (float)  
+            on_off (bool) True if doing 21 days on 7 days off dosing 
+            off_set (int) Can be used to change when on/off dose starts
+    """
     t = t+off_set
     if on_off:
         if isinstance(t, np.ndarray):
@@ -59,7 +73,6 @@ def derivs(state,t,p):
     delta_Lut_2 = p.k_1*Lut_1 - p.k_2*Lut_2
     delta_Lut_3 = p.k_2*Lut_2 - p.k_3*Lut_3
     delta_Lut_4 = p.k_3*Lut_3 - p.k_4*Lut_4
-    
     
     return [delta_RP_LH, delta_LH, delta_RP_FSH, delta_FSH, delta_RcF, delta_GrF, delta_DomF, delta_Sc_1, delta_Sc_2, delta_Lut_1, delta_Lut_2, delta_Lut_3, delta_Lut_4]
 
