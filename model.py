@@ -18,7 +18,6 @@ def calc_e_dose(t, e_dose, on_off = c.on_off, off_set=0):
 def calc_p_dose(t, p_dose, on_off = c.on_off, off_set=0):
     t = t+off_set
     if on_off:
-        print('no')
         if isinstance(t, np.ndarray):
             p_dose = np.where((t%28) >= 21, 0, p_dose)
         else:

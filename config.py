@@ -1,15 +1,15 @@
 from collections import namedtuple
 
 dosing_dict = {
-    'High E_2': [1.3,0],
-    'Low E_2': [0.6,0],
-    'High P_4': [0,92],
-    'Low P_4': [0,40],
+    'High P_4': [1.3,0],
+    'Low P_4': [0.6,0],
+    'High E_2': [0,92],
+    'Low E_2': [0,40],
     'Low Both': [0.6, 40],
     'Normal Cycle': [0,0]
 }
 
-dosing = 'Normal Cycle'
+dosing = 'High P_4'
 
 # Class with all the model parameters
 class Params:
@@ -58,8 +58,8 @@ class Params:
         self.h_1 = 0.009
         self.h_2 = 0.029
         self.h_3 = 0.018
-        self.p_dose = dosing_dict[dosing][1] # 0 or 0.6 or 1.3
-        self.e_dose = dosing_dict[dosing][0] # 0 or 40 or 92
+        self.p_dose = dosing_dict[dosing][0] # 0 or 0.6 or 1.3
+        self.e_dose = dosing_dict[dosing][1] # 0 or 40 or 92
 
 num_samples = 20000
 upper_bound = 180
