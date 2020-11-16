@@ -218,16 +218,86 @@ def plot_four_variables(yy, var_names, tt, num_samples = c.num_samples, on_off =
     fig.suptitle('Dose: ' + c.dosing)
     plt.tight_layout()
     plt.show()
+
+def plot_four_variables_red(yy, var_names, tt, num_samples = c.num_samples, on_off = c.on_off, days_on = c.days_on):
+    # Removes first 3 cycles
+    tt_mask = np.where(tt >= 84, True, False)
+    tt = tt[tt_mask]
+    yy = yy[tt_mask]
+    dosing = np.where((tt%28)>=days_on, 0, 1)
+
+    y = []
+    titles = []
+    ylabels = []
+    ylims = []
+    for var in var_names:
+        y.append(get_variable(var, yy, tt, c.Params(), days_on))
+        title, ylabel, ylim = get_plotting_params(var)
+        titles.append(title)
+        ylabels.append(ylabel)
+        ylims.append(ylim)
+
+    fig, axs = plt.subplots(2, 2)
+
+    if on_off:
+        ax1 = axs[0,0]
+        ax2 = ax1.twinx()
+        ax1.plot(tt,y[0])
+        ax2.plot(tt,dosing, c='r')
+        ax2.set(ylim=(-3, 1.5))
+    else: 
+        axs[0, 0].plot(tt, y[0])
+    axs[0, 0].set_title(var_names[0])
+
+    if on_off:
+        ax1 = axs[0,1]
+        ax2 = ax1.twinx()
+        ax1.plot(tt,y[1])
+        ax2.plot(tt,dosing, c='r')
+        ax2.set(ylim=(-3, 1.5))
+    else:
+        axs[0, 1].plot(tt, y[1])
+    axs[0, 1].set_title(var_names[1])
+
+    if on_off:
+        ax1 = axs[1,1]
+        ax2 = ax1.twinx()
+        ax1.plot(tt,y[3])
+        ax2.plot(tt,dosing, c='r')
+        ax2.set(ylim=(-3, 1.5))
+    else:
+        axs[1, 1].plot(tt, y[3])
+    axs[1, 1].set_title(var_names[3])
+
+    if on_off:
+        ax1 = axs[1,0]
+        ax2 = ax1.twinx()
+        ax1.plot(tt,y[2])
+        ax2.plot(tt,dosing, c='r')
+        ax2.set(ylim=(-3, 1.5))
+    else:
+        axs[1, 0].plot(tt, y[2])
+    axs[1, 0].set_title(var_names[2])
+
+    i = 0
+    for ax in axs.flat:
+        ax.set(xlabel='Time (days)', ylabel=ylabels[i], ylim=(0,ylims[i]))
+        i += 1
+
+    fig.suptitle('Dose: ' + c.dosing)
+    plt.tight_layout()
+    plt.show()
     
 
 if __name__ == "__main__":
 
-    tt, yy = solve(28)
+    tt, yy = solve(21)
 
     var_names = ['E_2', 'P_4', 'FSH', 'LH']
     # var_names = ['LH', 'RcF', 'GrF', 'DomF']
 
-    plot_four_variables(yy, var_names, tt, days_on = 28)
+    plot_four_variables(yy, var_names, tt, days_on = 21)
+    plot_four_variables_red(yy, var_names, tt, days_on = 21)
 
     # for var in var_names:
     #     plot_single_var(yy, var, tt)
