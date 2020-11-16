@@ -5,12 +5,15 @@ dosing_dict = {
     'High E_2': [0,92],
     'Low E_2': [0,40],
     'Low Both': [0.6, 40],
-    'Normal Cycle': [0,0]
+    'Normal Cycle': [0,0],
+    'High Both': [2.6,184]
 }
 
 # Select dosing scheme from dosing_dict
 dosing = 'Low Both'
 on_off = True
+off_set = 0
+days_on = 21
 
 # linspace params
 num_samples = 20000
