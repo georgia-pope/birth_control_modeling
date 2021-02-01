@@ -5,7 +5,34 @@ import matplotlib.pyplot as plt
 
 import config as c 
 
-def calc_e_dose(t, e_dose, on_off = c.on_off, off_set=c.off_set, days_on = c.days_on):
+def step_func(t, dose, days_on):
+    if isinstance(t, np.ndarray):
+        print(f'e dose days on: {days_on}')
+        dose = np.where((t%28) >= days_on, 0, dose)
+    else:
+        if (t%28) >= days_on:
+            dose=0
+    return dose
+
+def soft_step(tt, dose, days_on, lam_up = 3, lam_down=1/2):
+    shift = (28 - days_on)/2
+    t = tt + shift
+    if isinstance(tt, np.ndarray):
+        # print(f"lam 1: {lam_1}")
+        # print(f"lam 2: {lam_2}")
+        soft_step_dose = np.where(
+            ((t%28) <= days_on/2 + shift), 
+            dose*(1/(1+np.exp(-lam_up*(t%28)+shift))), 
+            - dose*(1/(1+np.exp(-lam_down*((t%28)- days_on - shift)))) + dose
+            )
+    else:
+        if (t%28) <= days_on/2 + shift:
+            soft_step_dose = dose*(1/(1+np.exp(-lam_up*(t%28)+shift)))
+        else:
+            soft_step_dose = - dose*(1/(1+np.exp(-lam_down*((t%28)- days_on - shift)))) + dose
+    return soft_step_dose
+
+def calc_e_dose(t, e_dose, func_form, on_off = c.on_off, off_set=c.off_set, days_on = c.days_on):
     """
         Params:
             t (either float or np.array)
@@ -13,18 +40,23 @@ def calc_e_dose(t, e_dose, on_off = c.on_off, off_set=c.off_set, days_on = c.day
             on_off (bool) True if doing on/off dosing 
             off_set (int) Can be used to change when on/off dose starts
             days_on (float) number of days taking hormonal birth control
+        Returns:
+            a value or an array of values representing the serum level of exogenous
+            estrogen at the given time(s)
     """
     t = t+off_set
-    if on_off:
+    if func_form == "constant":
         if isinstance(t, np.ndarray):
-            print(f'e dose days on: {days_on}')
-            e_dose = np.where((t%28) >= days_on, 0, e_dose)
+            e_dose = np.full_like(t,e_dose)
         else:
-            if (t%28) >= days_on:
-                e_dose=0
+            return e_dose
+    elif func_form == "step_func":
+        e_dose = step_func(t, e_dose, days_on)
+    elif func_form == "soft_step":
+        e_dose = soft_step(t, e_dose, days_on)
     return e_dose
 
-def calc_p_dose(t, p_dose, on_off = c.on_off, off_set=c.off_set, days_on = c.days_on):
+def calc_p_dose(t, p_dose, func_form, on_off = c.on_off, off_set=c.off_set, days_on = c.days_on):
     """
         Params:
             t (either float or np.array)
@@ -32,22 +64,27 @@ def calc_p_dose(t, p_dose, on_off = c.on_off, off_set=c.off_set, days_on = c.day
             on_off (bool) True if doing 21 days on 7 days off dosing 
             off_set (int) Can be used to change when on/off dose starts
             days_on (float) number of days taking hormonal birth control
+        Returns:
+            a value or an array of values representing the serum level of exogenous progesterone at 
+            the given time(s)
     """
     t = t+off_set
-    if on_off:
+    if func_form == "constant":
         if isinstance(t, np.ndarray):
-            print(f'p dose days on: {days_on}')
-            p_dose = np.where((t%28) >= days_on, 0, p_dose)
+            p_dose = np.full_like(t,p_dose)
         else:
-            if (t%28) >= days_on:
-                p_dose=0
+            return p_dose
+    elif func_form == "step_func":
+        p_dose = step_func(t, p_dose, days_on)
+    elif func_form == "soft_step":
+        p_dose = soft_step(t, p_dose, days_on)
     return p_dose
 
 def derivs(state,t,p,days_on):
     RP_LH, LH, RP_FSH, FSH, RcF, GrF, DomF, Sc_1, Sc_2, Lut_1, Lut_2, Lut_3, Lut_4 = state(t)
     RP_LHd, LHd, RP_FSHd, FSHd, RcFd, GrFd, DomFd, Sc_1d, Sc_2d, Lut_1d, Lut_2d, Lut_3d, Lut_4d = state(t-p.tau)
-    e_dose = calc_e_dose(t, p.e_dose, c.on_off, days_on = days_on)
-    p_dose = calc_p_dose(t, p.p_dose, c.on_off, days_on = days_on)
+    e_dose = calc_e_dose(t, p.e_dose, c.func_form, c.on_off, days_on = days_on)
+    p_dose = calc_p_dose(t, p.p_dose, c.func_form, c.on_off, days_on = days_on)
     E_2 = p.e_0 + p.e_1*GrF + p.e_2*DomF + p.e_3*Lut_4 + e_dose
     P_4 = p.p_0 + p.p_1*Lut_3 + p.p_2*Lut_4 + p_dose
     P_app = (P_4/2)*(1 + (E_2**p.mu / (p.K_mPapp**p.mu + E_2**p.mu)))
@@ -90,12 +127,12 @@ def solve(days_on=c.days_on):
     return tt, yy 
 
 def calculate_E2(p, yy, tt, days_on):
-    e_dose = calc_e_dose(tt, p.e_dose, days_on=days_on)
+    e_dose = calc_e_dose(tt, p.e_dose, c.func_form, days_on=days_on)
     E2 = p.e_0 + p.e_1*yy[:,c.variables['GrF']] + p.e_2*yy[:,c.variables['DomF']] + p.e_3*yy[:,c.variables['Lut_4']] + e_dose
     return E2
 
 def calculate_P4(p, yy, tt, days_on):
-    P_4 = p.p_0 + p.p_1*yy[:,c.variables['Lut_3']] + p.p_2*yy[:,c.variables['Lut_4']] + calc_p_dose(tt, p.p_dose, days_on=days_on)
+    P_4 = p.p_0 + p.p_1*yy[:,c.variables['Lut_3']] + p.p_2*yy[:,c.variables['Lut_4']] + calc_p_dose(tt, p.p_dose, c.func_form, days_on=days_on)
     return P_4
 
 def get_variable(var_name, yy, tt, p, days_on):
@@ -224,7 +261,12 @@ def plot_four_variables_red(yy, var_names, tt, num_samples = c.num_samples, on_o
     tt_mask = np.where(tt >= 84, True, False)
     tt = tt[tt_mask]
     yy = yy[tt_mask]
-    dosing = np.where((tt%28)>=days_on, 0, 1)
+    dosing = calc_e_dose(np.asarray(tt), 1, c.func_form)
+    print(np.asarray(tt))
+    print(dosing)
+    # print(tt)
+
+    # dosing = np.where((tt%28)>=days_on, 0, 1)
 
     y = []
     titles = []
@@ -296,10 +338,24 @@ if __name__ == "__main__":
     var_names = ['E_2', 'P_4', 'FSH', 'LH']
     # var_names = ['LH', 'RcF', 'GrF', 'DomF']
 
-    plot_four_variables(yy, var_names, tt, days_on = 21)
+    # plot_four_variables(yy, var_names, tt, days_on = 21)
     plot_four_variables_red(yy, var_names, tt, days_on = 21)
 
     # for var in var_names:
     #     plot_single_var(yy, var, tt)
+    # tt = np.linspace(0,100,101)
+    # # yy = -10*(1/(1+np.exp(-1*(tt-3.5)))) + 10
+    # yy = soft_step(tt, 10, 21, lam = 2)
+    # zz = step_func(tt,10,21)
+    # plt.plot(tt,yy)
+    # plt.plot(tt,zz)
+    # plt.show()
+    # days_on = 21
 
+    # test = np.where(
+    #         ((tt%28) <= days_on/2) | ((tt%28) >= days_on + (28 - days_on)/2), 
+    #         1, 0)
+    # for i in range(tt.shape[0]):
+    #     print(f"{tt[i]} : {test[i]}")
+    # print(test)
 

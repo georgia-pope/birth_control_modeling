@@ -14,10 +14,12 @@ dosing = 'Low Both'
 on_off = True
 off_set = 0
 days_on = 21
+days_wait = 84
+func_form = "step_func"
 
 # linspace params
 num_samples = 20000
-upper_bound = 180
+upper_bound = 264
 
 # Initial conditions from earlier paper
 initial_conditions = [29.65, 6.86, 8.47, 6.15, 3.83, 11.51, 5.48, 19.27, 45.64, 100.73, 125.95, 135.84, 168.71]
