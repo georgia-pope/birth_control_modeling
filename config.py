@@ -15,9 +15,9 @@ on_off = True
 off_set = 0
 days_on = 21
 days_wait = 84
-func_form = "exp_decay"
+func_form = "step_func"
 lam_up = 10
-lam_down = .25
+lam_down = 1
 
 # linspace params
 num_samples = 20000

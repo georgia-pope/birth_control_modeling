@@ -52,7 +52,7 @@ def exp_decay(tt, dose, days_on, lam=1):
         
 
 def calc_e_dose(
-    t, e_dose, func_form, 
+    t, e_dose, func_form = c.func_form, 
     on_off = c.on_off, off_set=c.off_set, 
     days_on = c.days_on, 
     lam_up=c.lam_up, lam_down = c.lam_down
@@ -83,7 +83,7 @@ def calc_e_dose(
     return e_dose
 
 def calc_p_dose(
-    t, p_dose, func_form, 
+    t, p_dose, func_form = c.func_form, 
     on_off = c.on_off, off_set=c.off_set, 
     days_on = c.days_on, 
     lam_up=c.lam_up, lam_down = c.lam_down
@@ -113,11 +113,11 @@ def calc_p_dose(
         p_dose = exp_decay(t, p_dose, days_on, lam_down)
     return p_dose
 
-def derivs(state,t,p,days_on,lam_up=c.lam_up, lam_down = c.lam_down):
+def derivs(state,t,p,days_on,lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
     RP_LH, LH, RP_FSH, FSH, RcF, GrF, DomF, Sc_1, Sc_2, Lut_1, Lut_2, Lut_3, Lut_4 = state(t)
     RP_LHd, LHd, RP_FSHd, FSHd, RcFd, GrFd, DomFd, Sc_1d, Sc_2d, Lut_1d, Lut_2d, Lut_3d, Lut_4d = state(t-p.tau)
-    e_dose = calc_e_dose(t, p.e_dose, c.func_form, c.on_off, days_on = days_on, lam_up=lam_up, lam_down = lam_down)
-    p_dose = calc_p_dose(t, p.p_dose, c.func_form, c.on_off, days_on = days_on, lam_up=lam_up, lam_down = lam_down)
+    e_dose = calc_e_dose(t, p.e_dose, func_form, c.on_off, days_on = days_on, lam_up=lam_up, lam_down = lam_down)
+    p_dose = calc_p_dose(t, p.p_dose, func_form, c.on_off, days_on = days_on, lam_up=lam_up, lam_down = lam_down)
     E_2 = p.e_0 + p.e_1*GrF + p.e_2*DomF + p.e_3*Lut_4 + e_dose
     P_4 = p.p_0 + p.p_1*Lut_3 + p.p_2*Lut_4 + p_dose
     P_app = (P_4/2)*(1 + (E_2**p.mu / (p.K_mPapp**p.mu + E_2**p.mu)))
@@ -153,27 +153,27 @@ def derivs(state,t,p,days_on,lam_up=c.lam_up, lam_down = c.lam_down):
 def initial_conditions(t):
     return c.initial_conditions
 
-def solve(days_on=c.days_on, lam_up=c.lam_up, lam_down = c.lam_down):
+def solve(days_on=c.days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
     params = c.Params()
     tt = np.linspace(0, c.upper_bound, c.num_samples)
-    yy = ddeint(derivs, initial_conditions, tt, fargs=(params,days_on,lam_up,lam_down))
+    yy = ddeint(derivs, initial_conditions, tt, fargs=(params,days_on,lam_up,lam_down,func_form))
     return tt, yy 
 
-def calculate_E2(p, yy, tt, days_on, lam_up=c.lam_up, lam_down = c.lam_down):
-    e_dose = calc_e_dose(tt, p.e_dose, c.func_form, days_on=days_on, lam_up=lam_up, lam_down = lam_down)
+def calculate_E2(p, yy, tt, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
+    e_dose = calc_e_dose(tt, p.e_dose, func_form, days_on=days_on, lam_up=lam_up, lam_down = lam_down)
     E2 = p.e_0 + p.e_1*yy[:,c.variables['GrF']] + p.e_2*yy[:,c.variables['DomF']] + p.e_3*yy[:,c.variables['Lut_4']] + e_dose
     return E2
 
-def calculate_P4(p, yy, tt, days_on, lam_up=c.lam_up, lam_down = c.lam_down):
-    p_dose = calc_p_dose(tt, p.p_dose, c.func_form, days_on=days_on, lam_up=lam_up, lam_down = lam_down)
+def calculate_P4(p, yy, tt, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
+    p_dose = calc_p_dose(tt, p.p_dose, func_form, days_on=days_on, lam_up=lam_up, lam_down = lam_down)
     P_4 = p.p_0 + p.p_1*yy[:,c.variables['Lut_3']] + p.p_2*yy[:,c.variables['Lut_4']] + p_dose
     return P_4
 
-def get_variable(var_name, yy, tt, p, days_on, lam_up=c.lam_up, lam_down = c.lam_down):
+def get_variable(var_name, yy, tt, p, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
     if var_name == 'E_2':
-        yy = calculate_E2(p, yy, tt, days_on, lam_up=lam_up, lam_down = lam_down)
+        yy = calculate_E2(p, yy, tt, days_on, lam_up=lam_up, lam_down = lam_down, func_form=func_form)
     elif var_name == 'P_4':
-        yy = calculate_P4(p,yy,tt, days_on, lam_up=lam_up, lam_down = lam_down)
+        yy = calculate_P4(p,yy,tt, days_on, lam_up=lam_up, lam_down = lam_down, func_form=func_form)
     elif var_name in list(c.variables.keys()):
         var_index = c.variables[var_name]
         yy = yy[:, var_index]
@@ -223,7 +223,7 @@ def plot_single_var(yy, var_name, tt, num_samples = c.num_samples, on_off = c.on
 
 def plot_four_variables(yy, var_names, tt, 
 num_samples = c.num_samples, on_off = c.on_off, days_on = c.days_on,
-lam_up=c.lam_up, lam_down=c.lam_down
+lam_up=c.lam_up, lam_down=c.lam_down, func_form=c.func_form
 ):
     # Removes first 3 cycles
     tt_mask = np.where(tt >= 84, True, False)
@@ -297,13 +297,13 @@ def plot_four_variables_red(
     yy, var_names, tt, 
     num_samples = c.num_samples, 
     on_off = c.on_off, days_on = c.days_on,
-    lam_up=c.lam_up, lam_down = c.lam_down
+    lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form
     ):
     # Removes first 3 cycles
     tt_mask = np.where(tt >= 84, True, False)
     tt = tt[tt_mask]
     yy = yy[tt_mask]
-    dosing = calc_e_dose(np.asarray(tt), 1, c.func_form, lam_up=lam_up, lam_down = lam_down)
+    dosing = calc_e_dose(np.asarray(tt), 1, func_form, lam_up=lam_up, lam_down = lam_down)
     print(np.asarray(tt))
     print(dosing)
     # print(tt)
@@ -317,7 +317,7 @@ def plot_four_variables_red(
     print('\nStarting to get variables')
     for var in var_names:
         print(f'Getting {var}')
-        y.append(get_variable(var, yy, tt, c.Params(), days_on,  lam_up=lam_up, lam_down = lam_down))
+        y.append(get_variable(var, yy, tt, c.Params(), days_on,  lam_up=lam_up, lam_down = lam_down, func_form=func_form))
         title, ylabel, ylim = get_plotting_params(var)
         titles.append(title)
         ylabels.append(ylabel)
