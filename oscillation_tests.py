@@ -65,17 +65,17 @@ def test_oscillation(test_type, ind_var, ind_var_vals, func_form=c.func_form):
     return tt, yy_list, [densities, frequencies, max_vals, min_vals, decay_ratio]
 
 if False:
-    vals = np.linspace(23,25,15)
-    ind_var = "days_on"
-    tt, yy_list, y_values = test_oscillation('PSD', ind_var, vals)
+    vals = np.linspace(22,30,10)
+    ind_var = "lam_down"
+    tt, yy_list, y_values = test_oscillation('PSD', ind_var, vals, "lin_decay")
     y_names = ["Max PSD", "Max Frequency", "Max Amplitude", "Min Amplitude", "Decay Ratio"]
 
     for i in range(len(yy_list)):
         yy, min_index, max_index = yy_list[i]
-        val_label = vals[i]
+        val_label = vals[i] 
         plt.figure()
         plt.plot(tt,yy)
-        dosing = model.calc_e_dose(np.asarray(tt), 1, c.func_form, lam_up=c.lam_up, lam_down = vals[i])
+        dosing = model.calc_e_dose(np.asarray(tt), 1, "lin_decay", lam_up=c.lam_up, lam_down = vals[i], days_on = c.days_on)
         title, ylabel, ylim = model.get_plotting_params("LH")
         plt.plot(tt[min_index], yy[min_index], 'o', label = 'min')
         plt.plot(tt[max_index], yy[max_index], 'o', label = 'max')
@@ -112,21 +112,36 @@ def lambda_integral(lam_down):
 def days_on_integral(days_on):
     return days_on - 21
 
+def lin_decay_integral(intercept, days_on=21):
+    integral = np.where(
+        intercept > 28, 
+        0.5*(intercept-days_on) - (intercept - 28)/(intercept-days_on),
+        0.5*(intercept-days_on))
+    if days_on != 21:
+        integral += (days_on-21)
+    return integral
+
 if True:
-    days_on_vals = np.linspace(23,25,20)
+    days_on_vals = np.linspace(22.5,25,1)
     days_on_ind_var = "days_on"
 
-    lam_vals = np.linspace(0.25,0.4,20)
+    lam_vals = np.linspace(0.25,0.5,1)
     lam_ind_var = "lam_down"
 
-    days_on_area = days_on_integral(days_on_vals)
-    lam_area = lambda_integral(lam_vals)
-    
-    days_on_tt, days_on_yy_list, days_on_y_values = test_oscillation('PSD', days_on_ind_var, days_on_vals, "step_func")
-    lam_tt, lam_yy_list, lam_y_values = test_oscillation('PSD', lam_ind_var, lam_vals,"exp_decay")
+    intercept_vals = np.linspace(25,29,20)
+    intercept_ind_var = "lam_down"
 
-    plt.plot(days_on_area, days_on_y_values[-1], label='days_on')
-    plt.plot(lam_area, lam_y_values[-1], label='lambda down')
+    # days_on_area = days_on_integral(days_on_vals)
+    # lam_area = lambda_integral(lam_vals)
+    intercept_area = lin_decay_integral(intercept_vals)
+    
+    # days_on_tt, days_on_yy_list, days_on_y_values = test_oscillation('PSD', days_on_ind_var, days_on_vals, "step_func")
+    # lam_tt, lam_yy_list, lam_y_values = test_oscillation('PSD', lam_ind_var, lam_vals,"exp_decay")
+    intercept_tt, intercept_yy_list, intercept_y_values = test_oscillation('PSD', intercept_ind_var, intercept_vals,"lin_decay")
+
+    # plt.plot(days_on_area, days_on_y_values[-1], label='step func')
+    # plt.plot(lam_area, lam_y_values[-1], label='exp decay')
+    plt.plot(intercept_area, intercept_y_values[-1], label='lin decay')
     plt.legend()
     plt.title('Decay Ratio vs. Area Under Dose Curve')
     plt.xlabel('Area under dose curve')
