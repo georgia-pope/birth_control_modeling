@@ -6,14 +6,14 @@ from scipy import signal
 from scipy.signal import find_peaks
 
 def PSD(yy):
-    frequency, power_spectrum = signal.welch(yy)
+    frequency, power_spectrum = signal.welch(yy, fs=75.75)
     arg_max = power_spectrum.argmax()
     max_density = power_spectrum[arg_max]
     max_frequency = frequency[arg_max]
     return max_density, max_frequency
 
 def calc_min_max(yy):
-    peaks,_ = find_peaks(yy, distance=1000)
+    peaks,_ = find_peaks(yy, distance=1500)
     yy_peaks = yy[peaks]
     min_index = peaks[np.argmin(yy_peaks)]
     max_index = peaks[np.argmax(yy_peaks)]
@@ -65,9 +65,9 @@ def test_oscillation(test_type, ind_var, ind_var_vals, func_form=c.func_form):
     return tt, yy_list, [densities, frequencies, max_vals, min_vals, decay_ratio]
 
 if False:
-    vals = np.linspace(22,30,10)
+    vals = [0.25, 0.5, 1, 2, 3, 4]
     ind_var = "lam_down"
-    tt, yy_list, y_values = test_oscillation('PSD', ind_var, vals, "lin_decay")
+    tt, yy_list, y_values = test_oscillation('PSD', ind_var, vals, "soft_step")
     y_names = ["Max PSD", "Max Frequency", "Max Amplitude", "Min Amplitude", "Decay Ratio"]
 
     for i in range(len(yy_list)):
@@ -75,7 +75,7 @@ if False:
         val_label = vals[i] 
         plt.figure()
         plt.plot(tt,yy)
-        dosing = model.calc_e_dose(np.asarray(tt), 1, "lin_decay", lam_up=c.lam_up, lam_down = vals[i], days_on = c.days_on)
+        dosing = model.calc_e_dose(np.asarray(tt), 1, "soft_step", lam_up=c.lam_up, lam_down = vals[i], days_on = c.days_on)
         title, ylabel, ylim = model.get_plotting_params("LH")
         plt.plot(tt[min_index], yy[min_index], 'o', label = 'min')
         plt.plot(tt[max_index], yy[max_index], 'o', label = 'max')
@@ -121,7 +121,7 @@ def lin_decay_integral(intercept, days_on=21):
         integral += (days_on-21)
     return integral
 
-if True:
+if False:
     days_on_vals = np.linspace(22.5,25,1)
     days_on_ind_var = "days_on"
 

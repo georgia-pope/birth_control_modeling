@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import config as c 
 
 def step_func(t, dose, days_on):
+    # print('DOING STEP FUNC')
     if isinstance(t, np.ndarray):
         print(f'e dose days on: {days_on}')
         dose = np.where((t%28) >= days_on, 0, dose)
@@ -15,15 +16,12 @@ def step_func(t, dose, days_on):
     return dose
 
 def soft_step(tt, dose, days_on, lam_up = c.lam_up, lam_down=c.lam_down):
+    # print('DOING SOFT STEP FUNC')
     shift = (28 - days_on)/2
     t = tt + shift
     up_lambda_shift = np.log((1-0.01)/0.01)/lam_up
     down_lambda_shift = -np.log(0.99/(1-0.99))/lam_down
     if isinstance(tt, np.ndarray):
-        print(f'lam up: {lam_up}')
-        print(f'lam down: {lam_down}')
-        print(f'up lambda shift: {up_lambda_shift}')
-        print(f'down lambda shift: {down_lambda_shift}')
         soft_step_dose = np.where(
             ((t%28) <= days_on/2 + shift), 
             dose*(1/(1+np.exp(-lam_up*((t%28)-shift-up_lambda_shift)))), 
@@ -49,6 +47,24 @@ def exp_decay(tt, dose, days_on, lam=1):
         else:
             exp_decay_dose = dose*np.exp(-lam*((tt%28)-days_on)) 
     return exp_decay_dose
+
+def lin_decay(tt, dose, days_on, intercept = 28):
+    def calc_decay_line(dose=dose, days_on=days_on, intercept=intercept):
+        rel_intercept = intercept - days_on
+        return lambda x: -dose*(x-days_on)/rel_intercept + dose 
+    decay_line = calc_decay_line()
+    if isinstance(tt, np.ndarray):
+        lin_decay_dose = np.where(
+            ((tt%28) >= days_on) & ((tt%28) <= intercept), 
+            decay_line(tt%28), 
+            step_func(tt,dose,days_on)
+            )
+    else:
+        if ((tt%28) >= days_on) and ((tt%28) <= intercept):
+            return decay_line(tt%28)
+        else:
+            lin_decay_dose = step_func(tt,dose,days_on) 
+    return lin_decay_dose
         
 
 def calc_e_dose(
@@ -77,9 +93,12 @@ def calc_e_dose(
     elif func_form == "step_func":
         e_dose = step_func(t, e_dose, days_on)
     elif func_form == "soft_step":
+        # print(f'lam down: {lam_down}')
         e_dose = soft_step(t, e_dose, days_on, lam_up, lam_down)
     elif func_form == "exp_decay":
         e_dose = exp_decay(t, e_dose, days_on, lam_down)
+    elif func_form == "lin_decay":
+        e_dose = lin_decay(t, e_dose, days_on, lam_down)
     return e_dose
 
 def calc_p_dose(
@@ -111,6 +130,8 @@ def calc_p_dose(
         p_dose = soft_step(t, p_dose, days_on, lam_up, lam_down)
     elif func_form == "exp_decay":
         p_dose = exp_decay(t, p_dose, days_on, lam_down)
+    elif func_form == "lin_decay":
+        p_dose = lin_decay(t, p_dose, days_on, lam_down)
     return p_dose
 
 def derivs(state,t,p,days_on,lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
@@ -153,8 +174,15 @@ def derivs(state,t,p,days_on,lam_up=c.lam_up, lam_down = c.lam_down, func_form=c
 def initial_conditions(t):
     return c.initial_conditions
 
-def solve(days_on=c.days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
+def solve(days_on=c.days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form, e_dose=None, p_dose=None):
     params = c.Params()
+    print('In solve:')
+    print(f'lam up: {lam_up}')
+    print(f'lam down: {lam_down}')
+    if e_dose is not None:
+        params.e_dose = e_dose
+    if p_dose is not None:
+        params.p_dose = p_dose
     tt = np.linspace(0, c.upper_bound, c.num_samples)
     yy = ddeint(derivs, initial_conditions, tt, fargs=(params,days_on,lam_up,lam_down,func_form))
     return tt, yy 
@@ -373,38 +401,26 @@ def plot_four_variables_red(
     fig.suptitle('Dose: ' + c.dosing)
     plt.tight_layout()
     plt.show()
-    
 
-if __name__ == "__main__":
+if False:
+    tt, yy = solve()
 
-    tt, yy = solve(21)
-
-    var_names = ['E_2', 'P_4', 'FSH', 'LH']
-    # # var_names = ['LH', 'RcF', 'GrF', 'DomF']
+    var_names_1 = ['E_2', 'P_4', 'FSH', 'LH']
+    var_names_2 = ['LH', 'RcF', 'GrF', 'DomF']
 
     # # plot_four_variables(yy, var_names, tt, days_on = 21)
-    plot_four_variables_red(yy, var_names, tt, days_on = 21)
+    plt.plot(tt, yy[:,1])
+    plt.show()
+    plot_four_variables_red(yy, var_names_1, tt, days_on = 21)
+    plot_four_variables_red(yy, var_names_2, tt, days_on = 21)
+    
 
-    # for var in var_names:
-    #     plot_single_var(yy, var, tt)
-    # tt = np.linspace(0,100,101)
-    # # yy = -10*(1/(1+np.exp(-1*(tt-3.5)))) + 10
-    # yy = soft_step(tt, 10, 21, lam = 2)
-    # zz = step_func(tt,10,21)
-    # plt.plot(tt,yy)
-    # plt.plot(tt,zz)
-    # plt.show()
-    # days_on = 21
+if False:
 
-    # test = np.where(
-    #         ((tt%28) <= days_on/2) | ((tt%28) >= days_on + (28 - days_on)/2), 
-    #         1, 0)
-    # for i in range(tt.shape[0]):
-    #     print(f"{tt[i]} : {test[i]}")
-    # print(test)
+    tt, yy = solve()
 
-    # tt = np.linspace(0,90,91)
-    # yy = exp_decay(tt, 1, 21)
-    # plt.plot(tt,yy)
-    # plt.show()
+    var_names = ['E_2', 'P_4', 'FSH', 'LH']
+    plot_four_variables_red(yy, var_names, tt, days_on = 28)
+
+  
 

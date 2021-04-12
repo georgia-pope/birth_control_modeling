@@ -6,18 +6,19 @@ dosing_dict = {
     'Low E_2': [0,40],
     'Low Both': [0.6, 40],
     'Normal Cycle': [0,0],
-    'High Both': [2.6,184]
+    'High Both': [1.3,92],
+    'Low E_2 High P_4':[1.3, 40]
 }
 
 # Select dosing scheme from dosing_dict
-dosing = 'High Both'
+dosing = 'Low Both'
 on_off = True
 off_set = 0
 days_on = 21
 days_wait = 84
-func_form = "step_func"
-lam_up = 10
-lam_down = .25
+func_form = "constant"
+lam_up = 0.25
+lam_down = .5
 
 # linspace params
 num_samples = 20000
@@ -52,7 +53,7 @@ class Params:
         self.c_LHE = 0.004
         self.a_LH = 14
         self.v_FSH = 375
-        self.tau = 1.5
+        self.tau = 0
         self.K_iFSH_InhA = 1.75
         self.k_FSH = 1.9
         self.c_FSHP = 12
@@ -89,4 +90,3 @@ class Params:
         self.h_3 = 0.018
         self.p_dose = dosing_dict[dosing][0] # 0 or 0.6 or 1.3
         self.e_dose = dosing_dict[dosing][1] # 0 or 40 or 92
-
