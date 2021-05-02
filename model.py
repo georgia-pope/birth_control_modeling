@@ -6,9 +6,18 @@ import matplotlib.pyplot as plt
 import config as c 
 
 def step_func(t, dose, days_on):
-    # print('DOING STEP FUNC')
+    """ 
+        Represents exogenous hormone levels as a step function whose value is dose for days_on
+        days and 0 for (28 - days_on) days
+        Params:
+            t (float or ndarray)
+            dose (float) dose of hormone that is being represented by a step function
+            days_on (float) number of days that birth control pill is taken
+        Returns:
+            if t is a float, returns a float representing the serum level of the hormone
+            if t is an ndarray, returns an ndarray of serum levels of the hormone for the given time period
+    """
     if isinstance(t, np.ndarray):
-        print(f'e dose days on: {days_on}')
         dose = np.where((t%28) >= days_on, 0, dose)
     else:
         if (t%28) >= days_on:
@@ -16,11 +25,30 @@ def step_func(t, dose, days_on):
     return dose
 
 def soft_step(tt, dose, days_on, lam_up = c.lam_up, lam_down=c.lam_down):
-    # print('DOING SOFT STEP FUNC')
+    """
+        Represents exogenous hormone levels as a function that resembles a step function, however the
+        changes in value are described by sigmoidal curves
+        Params:
+            tt (float or ndarray)
+            dose (float) dose of hormone that is being represented by a step function
+            days_on (float) number of days that birth control pill is taken
+            lam_up (float) lambda value in sigmoidal function representing the increase in exogenous hormones
+                after days off
+            lam_down (float) lambda value in sigmoidal function representing the decrease in exogenous hormones
+                when the days off start
+        Returns:
+            if tt is a float, returns a float representing the serum level of the hormone
+            if tt is an ndarray, returns an ndarray of serum levels of the hormone for the given time period
+    """
+    # Shifting t values to make calculation easier
     shift = (28 - days_on)/2
     t = tt + shift
+
+    # Shifting curves so that the decrease or increase in hormone levels occurs on the correct day
+    # (otherwise the sigmoid would be centered on the correct day)
     up_lambda_shift = np.log((1-0.01)/0.01)/lam_up
     down_lambda_shift = -np.log(0.99/(1-0.99))/lam_down
+
     if isinstance(tt, np.ndarray):
         soft_step_dose = np.where(
             ((t%28) <= days_on/2 + shift), 
@@ -32,9 +60,22 @@ def soft_step(tt, dose, days_on, lam_up = c.lam_up, lam_down=c.lam_down):
             soft_step_dose = dose*(1/(1+np.exp(-lam_up*((t%28)-shift-up_lambda_shift))))
         else:
             soft_step_dose = - dose*(1/(1+np.exp(-lam_down*((t%28)- days_on - shift + down_lambda_shift)))) + dose
+    
     return soft_step_dose
 
 def exp_decay(tt, dose, days_on, lam=1):
+    """
+        Represents exogenous hormone levels as a function where the hormone level is at dose for days_on days,
+        exponentially decays to 0 for (28 - days_on) days, and steps back up to dose 
+        Params:
+            tt (float or ndarray)
+            dose (float) dose of hormone that is being represented by a step function
+            days_on (float) number of days that birth control pill is taken
+            lam (float) lambda value for exponential decay
+        Returns:
+            if tt is a float, returns a float representing the serum level of the hormone
+            if tt is an ndarray, returns an ndarray of serum levels of the hormone for the given time period
+    """
     if isinstance(tt, np.ndarray):
         exp_decay_dose = np.where(
             (tt%28) <= days_on, 
@@ -49,6 +90,21 @@ def exp_decay(tt, dose, days_on, lam=1):
     return exp_decay_dose
 
 def lin_decay(tt, dose, days_on, intercept = 28):
+    """
+        Represents exogenous hormone levels as a function where the hormone level is at dose for days_on days,
+        linearly decays to 0 for (28 - days_on) days with a slope determined by intercept, 
+        and steps back up to dose 
+        Params:
+            tt (float or ndarray)
+            dose (float) dose of hormone that is being represented by a step function
+            days_on (float) number of days that birth control pill is taken
+            intercept (float) x-intercept that determines slope of decaying line 
+                intercept = days_on -> step function
+                intercept = 28 -> line with slope -dose/(28 - days_on)
+        Returns:
+            if tt is a float, returns a float representing the serum level of the hormone
+            if tt is an ndarray, returns an ndarray of serum levels of the hormone for the given time period
+    """
     def calc_decay_line(dose=dose, days_on=days_on, intercept=intercept):
         rel_intercept = intercept - days_on
         return lambda x: -dose*(x-days_on)/rel_intercept + dose 
@@ -77,9 +133,14 @@ def calc_e_dose(
         Params:
             t (either float or np.array)
             e_dose (float)  
+            func_form (string) indicates which functional form is being used to represent estrogen dosing
             on_off (bool) True if doing on/off dosing 
             off_set (int) Can be used to change when on/off dose starts
             days_on (float) number of days taking hormonal birth control
+            lam_up (float) if func_form is "soft_step", lam_up is lam_up param for soft_step()
+            lam_down (float) if func_form is "soft_step", lam_down is lam_down param for soft_step()
+                if func_form is "exp_decay", lam_down is the lam param for exp_decay()
+                if func_form is "lin_decay", lam_down is the intercept param for lin_decay()
         Returns:
             a value or an array of values representing the serum level of exogenous
             estrogen at the given time(s)
@@ -93,7 +154,6 @@ def calc_e_dose(
     elif func_form == "step_func":
         e_dose = step_func(t, e_dose, days_on)
     elif func_form == "soft_step":
-        # print(f'lam down: {lam_down}')
         e_dose = soft_step(t, e_dose, days_on, lam_up, lam_down)
     elif func_form == "exp_decay":
         e_dose = exp_decay(t, e_dose, days_on, lam_down)
@@ -111,9 +171,14 @@ def calc_p_dose(
         Params:
             t (either float or np.array)
             p_dose (float)  
-            on_off (bool) True if doing 21 days on 7 days off dosing 
+            func_form (string) indicates which functional form is being used to represent estrogen dosing
+            on_off (bool) True if doing on/off dosing 
             off_set (int) Can be used to change when on/off dose starts
             days_on (float) number of days taking hormonal birth control
+            lam_up (float) if func_form is "soft_step", lam_up is lam_up param for soft_step()
+            lam_down (float) if func_form is "soft_step", lam_down is lam_down param for soft_step()
+                if func_form is "exp_decay", lam_down is the lam param for exp_decay()
+                if func_form is "lin_decay", lam_down is the intercept param for lin_decay()
         Returns:
             a value or an array of values representing the serum level of exogenous progesterone at 
             the given time(s)
@@ -134,7 +199,19 @@ def calc_p_dose(
         p_dose = lin_decay(t, p_dose, days_on, lam_down)
     return p_dose
 
-def derivs(state,t,p,days_on,lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
+def derivs(state, t, p, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
+    """
+        Params:
+            state
+            t (np.array)
+            p (dict) parameter dictionary 
+            days_on (float) number of days taking hormonal birth control
+            lam_up (float) if func_form is "soft_step", lam_up is lam_up param for soft_step()
+            lam_down (float) if func_form is "soft_step", lam_down is lam_down param for soft_step()
+                if func_form is "exp_decay", lam_down is the lam param for exp_decay()
+                if func_form is "lin_decay", lam_down is the intercept param for lin_decay()
+            func_form (string) indicates which functional form is being used to represent hormone dosing
+    """
     RP_LH, LH, RP_FSH, FSH, RcF, GrF, DomF, Sc_1, Sc_2, Lut_1, Lut_2, Lut_3, Lut_4 = state(t)
     RP_LHd, LHd, RP_FSHd, FSHd, RcFd, GrFd, DomFd, Sc_1d, Sc_2d, Lut_1d, Lut_2d, Lut_3d, Lut_4d = state(t-p.tau)
     e_dose = calc_e_dose(t, p.e_dose, func_form, c.on_off, days_on = days_on, lam_up=lam_up, lam_down = lam_down)
@@ -172,13 +249,27 @@ def derivs(state,t,p,days_on,lam_up=c.lam_up, lam_down = c.lam_down, func_form=c
     return [delta_RP_LH, delta_LH, delta_RP_FSH, delta_FSH, delta_RcF, delta_GrF, delta_DomF, delta_Sc_1, delta_Sc_2, delta_Lut_1, delta_Lut_2, delta_Lut_3, delta_Lut_4]
 
 def initial_conditions(t):
+    """
+        Resurns initial conditions as specified in config.py
+    """
     return c.initial_conditions
 
 def solve(days_on=c.days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form, e_dose=None, p_dose=None):
+    """
+        Params:
+            days_on (float) number of days taking hormonal birth control
+            lam_up (float) if func_form is "soft_step", lam_up is lam_up param for soft_step()
+            lam_down (float) if func_form is "soft_step", lam_down is lam_down param for soft_step()
+                if func_form is "exp_decay", lam_down is the lam param for exp_decay()
+                if func_form is "lin_decay", lam_down is the intercept param for lin_decay()
+            func_form (string) indicates which functional form is being used to represent hormone dosing
+            e_dose (float) default value is None, if e_dose = None, e_dose = c.e_dose
+            p_dose (float) default value is None, if p_dose = None, p_dose = c.p_dose
+        Returns:
+            tt (ndarray) 
+            yy (ndarray)
+    """
     params = c.Params()
-    print('In solve:')
-    print(f'lam up: {lam_up}')
-    print(f'lam down: {lam_down}')
     if e_dose is not None:
         params.e_dose = e_dose
     if p_dose is not None:
@@ -198,6 +289,9 @@ def calculate_P4(p, yy, tt, days_on, lam_up=c.lam_up, lam_down = c.lam_down, fun
     return P_4
 
 def get_variable(var_name, yy, tt, p, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
+    """
+        Calculates values of var_name for a given timeseries yy (for plotting purposes)
+    """
     if var_name == 'E_2':
         yy = calculate_E2(p, yy, tt, days_on, lam_up=lam_up, lam_down = lam_down, func_form=func_form)
     elif var_name == 'P_4':
@@ -210,6 +304,12 @@ def get_variable(var_name, yy, tt, p, days_on, lam_up=c.lam_up, lam_down = c.lam
     return yy
 
 def get_plotting_params(var_name):
+    """
+        Retrieves plotting parameters from config.py
+
+        Returns:
+            title, y_label, ylim
+    """
     if var_name in list(c.plotting_params.keys()):
         title, y_label, ylim = c.plotting_params[var_name]
         return title, y_label, ylim

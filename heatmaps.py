@@ -5,8 +5,9 @@ import seaborn as sns
 import config as c
 from oscillation_tests import (PSD, calc_min_max) 
 import pandas as pd
+import shutil
 
-def get_timeseries(ind_var1, ind_var2, vals1, vals2, func_form=c.func_form):
+def get_timeseries(ind_var1, ind_var2, vals1, vals2, func_form=c.func_form, dosing = c.dosing, ind_var3 = None, vals3 = None):
     kwargs = {
         "days_on":c.days_on,
         "lam_up":c.lam_up,
@@ -18,11 +19,16 @@ def get_timeseries(ind_var1, ind_var2, vals1, vals2, func_form=c.func_form):
     yy_array = np.zeros((len(vals1)*len(vals2),int(c.num_samples/2)))
     i = 0
     for val1 in vals1:
+        j = 0
         for val2 in vals2:
             print(f'{ind_var1} = {val1}')
             print(f'{ind_var2} = {val2}')
             kwargs[ind_var1] = val1
             kwargs[ind_var2] = val2 
+            if ind_var3 is not None:
+                print('here')
+                kwargs[ind_var3] = vals3[j]
+
             tt, yy = model.solve(**kwargs)
 
             # Getting the time series after the initial conditions have worn off and only getting LH (y-index 1)
@@ -30,7 +36,11 @@ def get_timeseries(ind_var1, ind_var2, vals1, vals2, func_form=c.func_form):
             yy = yy[int(c.num_samples/2):,1]
             yy_array[i] = yy
             i += 1
-    np.save(f'{ind_var1}_{ind_var2}.npy', yy_array)
+            j+=1
+    np.save(f'timeseries/{ind_var1}_{ind_var2}_e2only.npy', yy_array)
+    # import module
+
+    shutil.copyfile('config.py',f'configs/{ind_var1}_{ind_var2}_e2only.txt')
 
 def get_plotting_vals(filename, vals1, vals2):
     yy_array = np.load(filename)
@@ -69,11 +79,15 @@ def get_heatmap(plot_vals, ind_var1, ind_var2, vals1, vals2, title, log=False):
     
 
 def main():
-    vals1 = [0.25, 0.5, 1, 2, 3, 4, 10]
-    vals2 = [0.25, 0.5, 1, 2, 3, 4, 10]
-    ind_var1 = "lam_up"
-    ind_var2 = "lam_down"
-    get_timeseries(ind_var1, ind_var2, vals1, vals2, func_form = "soft_step")
+    get_timeseries(
+        c.ind_var1, 
+        c.ind_var2, 
+        c.vals1, 
+        c.vals2, 
+        func_form = c.func_form, 
+        ind_var3 = c.ind_var3, 
+        vals3 = c.vals3
+        )
 
 if __name__ == "__main__":
     main()
