@@ -1,24 +1,36 @@
+import numpy as np
+
 # Dosing schemes
 dosing_dict = {
-    'High P_4': [1.3,0],
-    'Low P_4': [0.6,0],
-    'High E_2': [0,92],
-    'Low E_2': [0,40],
-    'Low Both': [0.6, 40],
-    'Normal Cycle': [0,0],
-    'High Both': [1.3,92],
-    'Low E_2 High P_4':[1.3, 40]
+    'High_P_4': [1.3,0],
+    'Low_P_4': [0.6,0],
+    'High_E_2': [0,92],
+    'Low_E_2': [0,40],
+    'Low_Both': [0.6, 40],
+    'Normal_Cycle': [0,0],
+    'High_Both': [1.3,92],
+    'Low_E_2_High P_4':[1.3, 40]
 }
 
 # Select dosing scheme from dosing_dict
-dosing = 'Low Both'
+dosing = 'High_P_4'
 on_off = True
 off_set = 0
 days_on = 21
 days_wait = 84
-func_form = "constant"
+func_form = "exp_decay"
 lam_up = 0.25
-lam_down = .5
+lam_down = 1
+missed_start = 10 # must be between 7 and 28
+days_missed=0
+
+# Heatmaps params
+vals1 = np.linspace(0.2,7,15)
+ind_var1 = "lam_down"
+ind_var2 = "p_dose"
+vals2 = np.linspace(0, 1.3, 15)
+vals3 = None
+ind_var3 = None
 
 # linspace params
 num_samples = 20000
