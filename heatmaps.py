@@ -39,10 +39,10 @@ def get_timeseries(ind_var1, ind_var2, vals1, vals2, func_form=c.func_form, dosi
             yy_array[i] = yy
             i += 1
             j+=1
-    np.save(f'timeseries/{ind_var1}_{ind_var2}_lam_1.npy', yy_array)
+    np.save(f'timeseries/{ind_var1}_{ind_var2}_days_on.npy', yy_array)
     # import module
 
-    shutil.copyfile('config.py',f'configs/{ind_var1}_{ind_var2}_lam_1.txt')
+    shutil.copyfile('config.py',f'configs/{ind_var1}_{ind_var2}_days_on.txt')
 
 def get_plotting_vals(filename, vals1, vals2):
     yy_array = np.load(filename)
