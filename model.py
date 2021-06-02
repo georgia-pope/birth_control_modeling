@@ -121,13 +121,34 @@ def lin_decay(tt, dose, days_on, intercept = 28):
         else:
             lin_decay_dose = step_func(tt,dose,days_on) 
     return lin_decay_dose
-        
+
+def missed_days(tt, dose, days_missed = 1, missed_start = 5, double_next = False, lam=1):
+    if isinstance(tt, np.ndarray):
+        exp_dose = exp_decay(tt, dose, 21, lam=lam)
+                    
+        dose = np.where(
+            (tt%(c.upper_bound/2) <  (missed_start+days_missed)) & (tt%(c.upper_bound/2) > (missed_start)),
+            # (tt%28 < (missed_start+days_missed))  &  (tt%28 > (missed_start)), 
+            dose*np.exp(-lam*((tt%(c.upper_bound/2))-missed_start)), 
+            exp_dose
+            )
+    else: 
+        if tt % 1 == 0:
+            print(days_missed)
+        # if (tt%28 < (missed_start+days_missed))  &  (tt%28 > (missed_start)):
+        if (tt%(c.upper_bound/2) <  (missed_start+days_missed)) & (tt%(c.upper_bound/2) > (missed_start+days_missed)):
+            # dose = dose*np.exp(-lam*((tt%28)-missed_start))
+            dose = dose*np.exp(-lam*((tt%(c.upper_bound/2))-missed_start))
+        else:
+            dose = exp_dose = exp_decay(tt, dose, 21, lam=lam)
+
+    return dose
 
 def calc_e_dose(
     t, e_dose, func_form = c.func_form, 
     on_off = c.on_off, off_set=c.off_set, 
     days_on = c.days_on, 
-    lam_up=c.lam_up, lam_down = c.lam_down
+    lam_up=c.lam_up, lam_down = c.lam_down, missed_start = c.missed_start, days_missed = c.days_missed
     ):
     """
         Params:
@@ -159,13 +180,15 @@ def calc_e_dose(
         e_dose = exp_decay(t, e_dose, days_on, lam_down)
     elif func_form == "lin_decay":
         e_dose = lin_decay(t, e_dose, days_on, lam_down)
+    elif func_form == "missed_days":
+        e_dose = missed_days(t, e_dose, missed_start = missed_start, days_missed = days_missed, double_next = False, lam=1)
     return e_dose
 
 def calc_p_dose(
     t, p_dose, func_form = c.func_form, 
     on_off = c.on_off, off_set=c.off_set, 
     days_on = c.days_on, 
-    lam_up=c.lam_up, lam_down = c.lam_down
+    lam_up=c.lam_up, lam_down = c.lam_down, missed_start = c.missed_start, days_missed = c.days_missed
     ):
     """
         Params:
@@ -197,9 +220,11 @@ def calc_p_dose(
         p_dose = exp_decay(t, p_dose, days_on, lam_down)
     elif func_form == "lin_decay":
         p_dose = lin_decay(t, p_dose, days_on, lam_down)
+    elif func_form == "missed_days":
+        p_dose = missed_days(t, p_dose, missed_start = missed_start, days_missed = days_missed, double_next = False, lam=1)
     return p_dose
 
-def derivs(state, t, p, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
+def derivs(state, t, p, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form,missed_start = c.missed_start, days_missed = c.days_missed):
     """
         Params:
             state
@@ -214,8 +239,8 @@ def derivs(state, t, p, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_fo
     """
     RP_LH, LH, RP_FSH, FSH, RcF, GrF, DomF, Sc_1, Sc_2, Lut_1, Lut_2, Lut_3, Lut_4 = state(t)
     RP_LHd, LHd, RP_FSHd, FSHd, RcFd, GrFd, DomFd, Sc_1d, Sc_2d, Lut_1d, Lut_2d, Lut_3d, Lut_4d = state(t-p.tau)
-    e_dose = calc_e_dose(t, p.e_dose, func_form, c.on_off, days_on = days_on, lam_up=lam_up, lam_down = lam_down)
-    p_dose = calc_p_dose(t, p.p_dose, func_form, c.on_off, days_on = days_on, lam_up=lam_up, lam_down = lam_down)
+    e_dose = calc_e_dose(t, p.e_dose, func_form, c.on_off, days_on = days_on, lam_up=lam_up, lam_down = lam_down, missed_start = missed_start, days_missed = days_missed)
+    p_dose = calc_p_dose(t, p.p_dose, func_form, c.on_off, days_on = days_on, lam_up=lam_up, lam_down = lam_down, missed_start = missed_start, days_missed = days_missed)
     E_2 = p.e_0 + p.e_1*GrF + p.e_2*DomF + p.e_3*Lut_4 + e_dose
     P_4 = p.p_0 + p.p_1*Lut_3 + p.p_2*Lut_4 + p_dose
     P_app = (P_4/2)*(1 + (E_2**p.mu / (p.K_mPapp**p.mu + E_2**p.mu)))
@@ -254,7 +279,7 @@ def initial_conditions(t):
     """
     return c.initial_conditions
 
-def solve(days_on=c.days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form, e_dose=None, p_dose=None):
+def solve(days_on=c.days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form, e_dose=None, p_dose=None, missed_start = c.missed_start, days_missed = c.days_missed):
     """
         Params:
             days_on (float) number of days taking hormonal birth control
@@ -270,32 +295,34 @@ def solve(days_on=c.days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c
             yy (ndarray)
     """
     params = c.Params()
+    print(f"missed days: {days_missed}")
+    print(f"missed start: {missed_start}")
     if e_dose is not None:
         params.e_dose = e_dose
     if p_dose is not None:
         params.p_dose = p_dose
     tt = np.linspace(0, c.upper_bound, c.num_samples)
-    yy = ddeint(derivs, initial_conditions, tt, fargs=(params,days_on,lam_up,lam_down,func_form))
+    yy = ddeint(derivs, initial_conditions, tt, fargs=(params,days_on,lam_up,lam_down,func_form,missed_start, days_missed))
     return tt, yy 
 
-def calculate_E2(p, yy, tt, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
-    e_dose = calc_e_dose(tt, p.e_dose, func_form, days_on=days_on, lam_up=lam_up, lam_down = lam_down)
+def calculate_E2(p, yy, tt, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form, missed_start = c.missed_start, days_missed = c.days_missed):
+    e_dose = calc_e_dose(tt, p.e_dose, func_form, days_on=days_on, lam_up=lam_up, lam_down = lam_down, missed_start = missed_start, days_missed = days_missed)
     E2 = p.e_0 + p.e_1*yy[:,c.variables['GrF']] + p.e_2*yy[:,c.variables['DomF']] + p.e_3*yy[:,c.variables['Lut_4']] + e_dose
     return E2
 
-def calculate_P4(p, yy, tt, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
-    p_dose = calc_p_dose(tt, p.p_dose, func_form, days_on=days_on, lam_up=lam_up, lam_down = lam_down)
+def calculate_P4(p, yy, tt, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form, missed_start = c.missed_start, days_missed = c.days_missed):
+    p_dose = calc_p_dose(tt, p.p_dose, func_form, days_on=days_on, lam_up=lam_up, lam_down = lam_down, missed_start = missed_start, days_missed = days_missed)
     P_4 = p.p_0 + p.p_1*yy[:,c.variables['Lut_3']] + p.p_2*yy[:,c.variables['Lut_4']] + p_dose
     return P_4
 
-def get_variable(var_name, yy, tt, p, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form):
+def get_variable(var_name, yy, tt, p, days_on, lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form, missed_start = c.missed_start, days_missed = c.days_missed):
     """
         Calculates values of var_name for a given timeseries yy (for plotting purposes)
     """
     if var_name == 'E_2':
-        yy = calculate_E2(p, yy, tt, days_on, lam_up=lam_up, lam_down = lam_down, func_form=func_form)
+        yy = calculate_E2(p, yy, tt, days_on, lam_up=lam_up, lam_down = lam_down, func_form=func_form, missed_start = missed_start, days_missed = days_missed)
     elif var_name == 'P_4':
-        yy = calculate_P4(p,yy,tt, days_on, lam_up=lam_up, lam_down = lam_down, func_form=func_form)
+        yy = calculate_P4(p,yy,tt, days_on, lam_up=lam_up, lam_down = lam_down, func_form=func_form, missed_start = missed_start, days_missed = days_missed)
     elif var_name in list(c.variables.keys()):
         var_index = c.variables[var_name]
         yy = yy[:, var_index]
@@ -425,13 +452,13 @@ def plot_four_variables_red(
     yy, var_names, tt, 
     num_samples = c.num_samples, 
     on_off = c.on_off, days_on = c.days_on,
-    lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form
+    lam_up=c.lam_up, lam_down = c.lam_down, func_form=c.func_form, missed_start = c.missed_start, days_missed = c.days_missed
     ):
     # Removes first 3 cycles
     tt_mask = np.where(tt >= 84, True, False)
     tt = tt[tt_mask]
     yy = yy[tt_mask]
-    dosing = calc_e_dose(np.asarray(tt), 1, func_form, lam_up=lam_up, lam_down = lam_down)
+    dosing = calc_e_dose(np.asarray(tt), 1, func_form, lam_up=lam_up, lam_down = lam_down, missed_start = missed_start, days_missed = days_missed)
     print(np.asarray(tt))
     print(dosing)
     # print(tt)
@@ -445,7 +472,7 @@ def plot_four_variables_red(
     print('\nStarting to get variables')
     for var in var_names:
         print(f'Getting {var}')
-        y.append(get_variable(var, yy, tt, c.Params(), days_on,  lam_up=lam_up, lam_down = lam_down, func_form=func_form))
+        y.append(get_variable(var, yy, tt, c.Params(), days_on,  lam_up=lam_up, lam_down = lam_down, func_form=func_form, missed_start = missed_start, days_missed = days_missed))
         title, ylabel, ylim = get_plotting_params(var)
         titles.append(title)
         ylabels.append(ylabel)
@@ -514,13 +541,16 @@ if False:
     plot_four_variables_red(yy, var_names_1, tt, days_on = 21)
     plot_four_variables_red(yy, var_names_2, tt, days_on = 21)
     
-
 if False:
 
-    tt, yy = solve()
+    # tt, yy = solve(func_form="missed_days", missed_start= 10, days_missed=1)
+    tt = np.linspace(0, c.upper_bound, c.num_samples)
+    e_dose = calc_e_dose(tt,1,days_missed=1, missed_start=7)
+    plt.plot(tt,e_dose)
+    plt.show()
 
-    var_names = ['E_2', 'P_4', 'FSH', 'LH']
-    plot_four_variables_red(yy, var_names, tt, days_on = 28)
+    # var_names = ['E_2', 'P_4', 'FSH', 'LH']
+    # plot_four_variables_red(yy, var_names, tt, days_on = 21, func_form="missed_days", missed_start=5, days_missed=0)
 
   
 

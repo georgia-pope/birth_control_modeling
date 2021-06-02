@@ -14,7 +14,9 @@ def get_timeseries(ind_var1, ind_var2, vals1, vals2, func_form=c.func_form, dosi
         "lam_down":c.lam_down,
         "func_form":func_form,
         "e_dose":None,
-        "p_dose":None
+        "p_dose":None,
+        "days_missed":c.days_missed,
+        "missed_start":c.missed_start
     }
     yy_array = np.zeros((len(vals1)*len(vals2),int(c.num_samples/2)))
     i = 0
@@ -37,10 +39,10 @@ def get_timeseries(ind_var1, ind_var2, vals1, vals2, func_form=c.func_form, dosi
             yy_array[i] = yy
             i += 1
             j+=1
-    np.save(f'timeseries/{ind_var1}_{ind_var2}_e2only.npy', yy_array)
+    np.save(f'timeseries/{ind_var1}_{ind_var2}_lam_1.npy', yy_array)
     # import module
 
-    shutil.copyfile('config.py',f'configs/{ind_var1}_{ind_var2}_e2only.txt')
+    shutil.copyfile('config.py',f'configs/{ind_var1}_{ind_var2}_lam_1.txt')
 
 def get_plotting_vals(filename, vals1, vals2):
     yy_array = np.load(filename)
@@ -66,15 +68,34 @@ def get_plotting_vals(filename, vals1, vals2):
     w = len(vals2)
     return densities.reshape((h,w)), frequencies.reshape((h,w)), decay_ratio.reshape((h,w)), avg_amp.reshape((h,w))
 
-def get_heatmap(plot_vals, ind_var1, ind_var2, vals1, vals2, title, log=False):
+def get_heatmap(plot_vals, ind_var1, ind_var2, vals1, vals2, title, log=False, x_label=None, y_label=None):
+    if x_label != None:
+        ind_var2 = x_label
+    if y_label != None:
+        ind_var1 = y_label
     if log:
         plot_vals = np.log(plot_vals)
-    plot_vals_df = pd.DataFrame(plot_vals, columns = vals2, index = vals1)
+
+    import matplotlib.pylab as pylab
+    params = {'legend.fontsize': 'x-large',
+            'figure.figsize': (15, 5),
+            'axes.labelsize': 'x-large',
+            'axes.titlesize':'x-large',
+            'xtick.labelsize':24,
+            'ytick.labelsize':24}
+    pylab.rcParams.update(params)
+    plot_vals_df = pd.DataFrame(plot_vals, columns = vals2.round(decimals=1), index = vals1.round(decimals=1))
     plot_vals_df = plot_vals_df.iloc[::-1]
-    sns.heatmap(plot_vals_df)
-    plt.ylabel(ind_var1)
-    plt.xlabel(ind_var2)
-    plt.title(title)
+    # sns.color_palette("crest", as_cmap=True)
+    plt.figure(figsize=(10,8))
+    
+    sns.heatmap(plot_vals_df, cmap = "RdBu_r", xticklabels=2, yticklabels=2)
+    # sns.heatmap(plot_vals_df, cmap = "RdYlBu")
+    plt.ylabel(ind_var1, fontsize=28)
+    plt.xlabel(ind_var2, fontsize=28)
+    plt.title(title, fontsize=35)
+    plt.xticks(rotation=-45)
+    plt.yticks(rotation=0)
     plt.show()
     
 
